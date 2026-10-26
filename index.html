@@ -17,10 +17,23 @@
             <p style="margin-bottom: 8px; font-weight: bold; color: #555;">กรุณาใส่ชื่อผู้เล่น:</p>
             <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณตรงนี้" maxlength="15">
         </div>
+
+		<div class="set-select-box" style="margin-top: 15px; margin-bottom: 15px;">
+  		<p style="margin-bottom: 8px; font-weight: bold; color: #555;">เลือกชุดภาพถ่าย (Set):</p>
+  		<select id="setSelect" style="width: 100%; padding: 10px; border: 2px solid #3498db; border-radius: 5px; font-size: 16px;">
+    		<option value="1">Set 1 (ภาพปกติ)</option>
+    		<option value="2">Set 2 (ภาพชุดที่ 2)</option>
+  		</select>
+		</div>
+		
         <button class="btn" style="background: #2ecc71;" onclick="initStartGame()">เริ่มเล่นเกม</button>
         
         <div class="highscore-box">
             <h3>🏆 10 อันดับคะแนนสูงสุด</h3>
+			<div class="score-tabs" style="display: flex; gap: 5px; margin-bottom: 10px;">
+  				<button id="btnTab1" class="btn" style="padding: 5px 10px; font-size: 14px; background: #3498db;" onclick="switchScoreTab(1)">Set 1</button>
+  				<button id="btnTab2" class="btn" style="padding: 5px 10px; font-size: 14px; background: #bdc3c7;" onclick="switchScoreTab(2)">Set 2</button>
+			</div>
             <ul id="scoreList" class="score-list"></ul>
         </div>
     </div>
@@ -48,7 +61,19 @@
     </div>
 
 	<script>
-
+		let selectedSet = "1"; // ตัวแปรเก็บ Set ที่เลือกเล่น
+		let viewingScoreSet = "1"; // ตัวแปรเก็บตารางคะแนนที่กำลังดูอยู่
+		
+		function switchScoreTab(setNum) {
+		    viewingScoreSet = setNum.toString();
+		    document.getElementById("btnTab1").style.background = (setNum === 1) ? "#3498db" : "#bdc3c7";
+		    document.getElementById("btnTab2").style.background = (setNum === 2) ? "#3498db" : "#bdc3c7";
+		    // สั่งให้ดึงคะแนนใหม่ (ฟังก์ชัน Firebase จะมาต่อในรอบถัดไป)
+		    if (typeof window.loadFirebaseScores === "function") {
+		        window.loadFirebaseScores(viewingScoreSet);
+		    }
+		}
+		
 		let curStg = 0, lives = 3, foundInStage = 0, isOver = false, mode = "NEXT", activeDiffs = [];
 		let totalScore = 0, playerName = "Guest";
 
@@ -109,8 +134,10 @@
 	    document.getElementById("gameScore").innerText = totalScore;
 	    document.getElementById("lives").innerText = "❤".repeat(lives) + "💔".repeat(3 - lives);
 	    
-	    document.getElementById("srcL").src = `images/image${idx + 1}L.jpg`;
-	    document.getElementById("srcR").src = `images/image${idx + 1}R.jpg`;
+	    // เปลี่ยนโฟลเดอร์ตาม Set ที่เลือก (Set 1 ไป images, Set 2 ไป image2)
+		const folder = (selectedSet === "1") ? "images1" : "image2";
+		document.getElementById("srcL").src = `${folder}/image${idx + 1}L.jpg`;
+		document.getElementById("srcR").src = `${folder}/image${idx + 1}R.jpg`;
 	    
 	    document.querySelectorAll(".marker").forEach(el => el.remove());
 	    activeDiffs = diffsData[idx].map(d => ({ positions: d, found: false }));
