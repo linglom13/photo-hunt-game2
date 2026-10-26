@@ -111,122 +111,126 @@
         }
 		
 		function initStartGame() {
-	    const inputName = document.getElementById("playerNameInput").value.trim();
-	    if (inputName === "") {
-	        alert("กรุณากรอกชื่อผู้เล่นก่อนเริ่มเกมนะครับ!");
-	        return;
-	    }
-	    playerName = inputName;
-	    totalScore = 0; lives = 3; curStg = 0;
-	
-	    document.getElementById("mainMenu").style.display = "none";
-	    document.getElementById("gameHeader").style.display = "block";
-	    document.getElementById("gameArea").style.display = "flex";
-	    document.getElementById("displayPlayerName").innerText = playerName;
+			// ดึงค่า Set ที่ผู้เล่นเลือกไว้ก่อนเริ่มเกม
+			selectedSet = document.getElementById("setSelect").value;
 
-		startBgm(); // เริ่มเล่นเพลงเบื้องหลังตอนเข้าเกม
-	    loadStage(curStg);
-	}
+			const inputName = document.getElementById("playerNameInput").value.trim();
+			if (inputName === "") {
+				alert("กรุณากรอกชื่อผู้เล่นก่อนเริ่มเกมนะครับ!");
+				return;
+			}
+			playerName = inputName;
+			totalScore = 0; lives = 3; curStg = 0;
+		
+			document.getElementById("mainMenu").style.display = "none";
+			document.getElementById("gameHeader").style.display = "block";
+			document.getElementById("gameArea").style.display = "flex";
+			document.getElementById("displayPlayerName").innerText = playerName;
+
+			startBgm(); // เริ่มเล่นเพลงเบื้องหลังตอนเข้าเกม
+			loadStage(curStg);
+		}
 	
-	function loadStage(idx) {
-	    isOver = false; foundInStage = 0;
-	    document.getElementById("stg").innerText = idx + 1;
-	    document.getElementById("gameScore").innerText = totalScore;
-	    document.getElementById("lives").innerText = "❤".repeat(lives) + "💔".repeat(3 - lives);
-	    
-	    // เปลี่ยนโฟลเดอร์ตาม Set ที่เลือก (Set 1 ไป images, Set 2 ไป image2)
-		const folder = (selectedSet === "1") ? "images1" : "image2";
-		document.getElementById("srcL").src = `${folder}/image${idx + 1}L.jpg`;
-		document.getElementById("srcR").src = `${folder}/image${idx + 1}R.jpg`;
-	    
-	    document.querySelectorAll(".marker").forEach(el => el.remove());
-	    activeDiffs = diffsData[idx].map(d => ({ positions: d, found: false }));
-	    document.getElementById("overlay").style.display = "none";
-	}
-	
-	function checkClick(e) {
-		if (isOver) return;
-	  	const rect = e.currentTarget.getBoundingClientRect();
-	  	const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-	  	let hit = false;
-	  
-	  	for (let d of activeDiffs) {
-	    	if (!d.found) {
-	      		const match = d.positions.find(pos => Math.sqrt((cx - pos.x)**2 + (cy - pos.y)**2) <= 30);
-	      		if (match) {
-			        d.found = true;
-			        hit = true;
-			        foundInStage++;
-			        totalScore += 10;
-			        document.getElementById("gameScore").innerText = totalScore;
-			        playSound(sndCorrect);
-			        d.positions.forEach(pos => createMarker(pos.x, pos.y));
-		        
-			        // แก้ไขบรรทัดนี้: เปลี่ยนจาก === 3 เป็นเช็คจำนวนจุดทั้งหมดในด่านนั้นอัตโนมัติ
-			        if (foundInStage === activeDiffs.length) showOverlay(curStg === 4 ? "WIN_ALL" : "NEXT");
-			        break;
-	      		}
-	    	}
-	  	}
-	  
-	  	if (!hit) {
-	    	lives--;
-	    	document.getElementById("lives").innerText = "❤".repeat(lives) + "💔".repeat(3 - lives);
-	    	playSound(sndWrong);
-	    	if (lives <= 0) showOverlay("GAME_OVER");
-	  	}
-	}
-	
-	function createMarker(x, y) {
-	    ["imgL", "imgR"].forEach(id => {
-	        const m = document.createElement("div"); m.className = "marker";
-	        m.style.left = x + "px"; m.style.top = y + "px";
-	        document.getElementById(id).appendChild(m);
-	    });
-	}
-	
-	function showOverlay(type) {
-	    isOver = true;
-	    //playSound(sndWin);
-	    const txt = document.getElementById("overText"), btn = document.getElementById("overBtn");
-	    
-	    if (type === "NEXT") { 
-	        txt.innerText = `ผ่านด่านที่ ${curStg+1} แล้ว!\nคะแนนตอนนี้: ${totalScore}`; 
-	        btn.innerText = "ลุยด่านถัดไป"; mode = "NEXT"; 
-	    } else {
-			stopBgm(); // ปิดเพลงเบื้องหลังเมื่อจบเกม (ชนะทั้งหมด หรือ เกมโอเวอร์)
+		function loadStage(idx) {
+			isOver = false; foundInStage = 0;
+			document.getElementById("stg").innerText = idx + 1;
+			document.getElementById("gameScore").innerText = totalScore;
+			document.getElementById("lives").innerText = "❤".repeat(lives) + "💔".repeat(3 - lives);
 			
-	        if (typeof window.firebaseProcessHighScore === "function") {
-				window.firebaseProcessHighScore(playerName, totalScore);
-            }
-	        if (type === "WIN_ALL") { 
-	            txt.innerHTML = `🎉 สุดยอด! เคลียร์ครบ 5 ด่าน! 🎉<br>คะแนนรวม: ${totalScore} คะแนน`; 
-	            txt.style.color = "#2ecc71";
-	        } else { 
-	            txt.innerHTML = `💥 เกมโอเวอร์ พลังชีวิตหมด! 💥<br>คะแนนทำได้รวม: ${totalScore} คะแนน`; 
-	            txt.style.color = "#e74c3c";
-	        }
-	        btn.innerText = "กลับหน้าหลัก"; mode = "MAIN_MENU";
-	    }
-	    document.getElementById("overlay").style.display = "flex";
-	}
-	
-	function overlayAction() {
-	    if (mode === "NEXT") { 
-	        curStg++; loadStage(curStg);
-	    } else if (mode === "MAIN_MENU") {
-	        document.getElementById("overlay").style.display = "none";
-	        document.getElementById("gameHeader").style.display = "none";
-	        document.getElementById("gameArea").style.display = "none";
-	        document.getElementById("mainMenu").style.display = "block";
-	        document.getElementById("playerNameInput").value = "";
-	    }
-	}
+			// เปลี่ยนโฟลเดอร์ตาม Set ที่เลือก (Set 1 ไป images, Set 2 ไป image2)
+			const folder = (selectedSet === "1") ? "images1" : "image2";
+			document.getElementById("srcL").src = `${folder}/image${idx + 1}L.jpg`;
+			document.getElementById("srcR").src = `${folder}/image${idx + 1}R.jpg`;
+			
+			document.querySelectorAll(".marker").forEach(el => el.remove());
+			activeDiffs = diffsData[idx].map(d => ({ positions: d, found: false }));
+			document.getElementById("overlay").style.display = "none";
+		}
+		
+		function checkClick(e) {
+			if (isOver) return;
+			const rect = e.currentTarget.getBoundingClientRect();
+			const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+			let hit = false;
+		
+			for (let d of activeDiffs) {
+				if (!d.found) {
+					const match = d.positions.find(pos => Math.sqrt((cx - pos.x)**2 + (cy - pos.y)**2) <= 30);
+					if (match) {
+						d.found = true;
+						hit = true;
+						foundInStage++;
+						totalScore += 10;
+						document.getElementById("gameScore").innerText = totalScore;
+						playSound(sndCorrect);
+						d.positions.forEach(pos => createMarker(pos.x, pos.y));
+					
+						// แก้ไขบรรทัดนี้: เปลี่ยนจาก === 3 เป็นเช็คจำนวนจุดทั้งหมดในด่านนั้นอัตโนมัติ
+						if (foundInStage === activeDiffs.length) showOverlay(curStg === 4 ? "WIN_ALL" : "NEXT");
+						break;
+					}
+				}
+			}
+		
+			if (!hit) {
+				lives--;
+				document.getElementById("lives").innerText = "❤".repeat(lives) + "💔".repeat(3 - lives);
+				playSound(sndWrong);
+				if (lives <= 0) showOverlay("GAME_OVER");
+			}
+		}
+		
+		function createMarker(x, y) {
+			["imgL", "imgR"].forEach(id => {
+				const m = document.createElement("div"); m.className = "marker";
+				m.style.left = x + "px"; m.style.top = y + "px";
+				document.getElementById(id).appendChild(m);
+			});
+		}
+		
+		function showOverlay(type) {
+			isOver = true;
+			//playSound(sndWin);
+			const txt = document.getElementById("overText"), btn = document.getElementById("overBtn");
+			
+			if (type === "NEXT") { 
+				txt.innerText = `ผ่านด่านที่ ${curStg+1} แล้ว!\nคะแนนตอนนี้: ${totalScore}`; 
+				btn.innerText = "ลุยด่านถัดไป"; mode = "NEXT"; 
+			} else {
+				stopBgm(); // ปิดเพลงเบื้องหลังเมื่อจบเกม (ชนะทั้งหมด หรือ เกมโอเวอร์)
+				
+				if (typeof window.firebaseProcessHighScore === "function") {
+					window.firebaseProcessHighScore(playerName, totalScore);
+				}
+				if (type === "WIN_ALL") { 
+					txt.innerHTML = `🎉 สุดยอด! เคลียร์ครบ 5 ด่าน! 🎉<br>คะแนนรวม: ${totalScore} คะแนน`; 
+					txt.style.color = "#2ecc71";
+				} else { 
+					txt.innerHTML = `💥 เกมโอเวอร์ พลังชีวิตหมด! 💥<br>คะแนนทำได้รวม: ${totalScore} คะแนน`; 
+					txt.style.color = "#e74c3c";
+				}
+				btn.innerText = "กลับหน้าหลัก"; mode = "MAIN_MENU";
+			}
+			document.getElementById("overlay").style.display = "flex";
+		}
+		
+		function overlayAction() {
+			if (mode === "NEXT") { 
+				curStg++; loadStage(curStg);
+			} else if (mode === "MAIN_MENU") {
+				document.getElementById("overlay").style.display = "none";
+				document.getElementById("gameHeader").style.display = "none";
+				document.getElementById("gameArea").style.display = "none";
+				document.getElementById("mainMenu").style.display = "block";
+				document.getElementById("playerNameInput").value = "";
+			}
+		}
 	</script>
 	
     <!-- เรียกสคริปต์เกมปกติ -->
     <!-- Firebase SDK Modules via CDN -->
 <script type="module">
+
     // Import the functions you need from the SDKs
     import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
 	import { getDatabase, ref, push, update, remove, onValue, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
@@ -242,90 +246,71 @@
 		databaseURL: "https://my-simple-games-default-rtdb.asia-southeast1.firebasedatabase.app" 
 	};
 
-    	// Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const highscoresRef = ref(db, "highscores2");
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-        // ตัวแปรภายในเพื่อเก็บสำเนาสแนปชอตล่าสุดของ 10 อันดับแรกไว้เช็คเงื่อนไขตอนจบเกม
-        let currentTopScores = [];
-
-        // 1. แสดงคะแนนสูงสุด 10 อันดับในหน้าแรกแบบ Real-time
-        const topScoresQuery = query(highscoresRef, orderByChild("score"), limitToLast(10));
-        
-        onValue(topScoresQuery, (snapshot) => {
-            const scoreListUl = document.getElementById("scoreList");
-            scoreListUl.innerHTML = "";
-
-            currentTopScores = [];
-            snapshot.forEach((childSnapshot) => {
-                currentTopScores.push({
-                    key: childSnapshot.key,
-                    ...childSnapshot.val()
-                });
-            });
-
-            // เรียงลำดับจากคะแนนมากไปหาน้อย
-            currentTopScores.sort((a, b) => b.score - a.score);
-
-            if (currentTopScores.length === 0) {
-                scoreListUl.innerHTML = "<li style='text-align:center; color:#999;'>ยังไม่มีคะแนนบันทึกในขณะนี้</li>";
-                return;
-            }
-
-            currentTopScores.forEach((data, index) => {
-                const li = document.createElement("li");
-                let rankBadge = `${index + 1}.`;
-				if (index === 0) rankBadge = "🥇";
-				if (index === 1) rankBadge = "🥈";
-				if (index === 2) rankBadge = "🥉";
-				li.innerHTML = `<span>${rankBadge} ${data.playerName}</span> <strong>${data.score} แต้ม</strong>`;
-				scoreListUl.appendChild(li);
-			});
+	// กำหนดโหนดเริ่มต้นและฟังก์ชันสำหรับโหลดคะแนนแบบแยก Set
+	window.loadFirebaseScores = function(setNum) {
+  	const targetRef = ref(db, `highscores_set${setNum}`);
+	const topScoresQuery = query(targetRef, orderByChild("score"), limitToLast(10));
+	
+	onValue(topScoresQuery, (snapshot) => {
+		const scoreListUl = document.getElementById("scoreList");
+		scoreListUl.innerHTML = "";
+		let currentTopScores = [];
+		
+		snapshot.forEach((childSnapshot) => {
+		currentTopScores.push({ key: childSnapshot.key, ...childSnapshot.val() });
 		});
 		
-	// 2. ตรวจสอบและบันทึกคะแนนเมื่อจบเกม
-        window.firebaseProcessHighScore = function(newPlayerName, newScore) {
-            const existingRecord = currentTopScores.find(item => item.playerName === newPlayerName);
-
-            if (existingRecord) {
-                // ถ้ามีชื่ออยู่แล้ว และได้คะแนนมากกว่าเดิม -> อัปเดตคีย์เดิม
-                if (newScore > existingRecord.score) {
-					const recordRef = ref(db, `highscores2/${existingRecord.key}`);
-					update(recordRef, {
-						score: newScore,
-						timestamp: Date.now()
-					});
-				}
-			} else {
-				// ถ้าเป็นผู้เล่นใหม่
-				if (currentTopScores.length < 10) {
-					// ถ้าบอร์ดยังไม่เต็ม 10 คน -> บันทึกได้เลย
-					push(highscoresRef, {
-						playerName: newPlayerName,
-						score: newScore,
-						timestamp: Date.now()
-					});
-				} else {
-					// ถ้าบอร์ดเต็ม 10 คนแล้ว -> เช็คแต้มเบียดคะแนนอันดับท้ายสุด
-					const lowestRecord = currentTopScores[currentTopScores.length - 1];
-					if (newScore > lowestRecord.score) {
-					// ลบคะแนนที่น้อยที่สุดออกก่อน
-					const lowestRecordRef = ref(db, `highscores2/${lowestRecord.key}`);
-					remove(lowestRecordRef).then(() => {
-						// เพิ่มคะแนนใหม่เข้าไปแทนที่
-						push(highscoresRef, {
-							playerName: newPlayerName,
-							score: newScore,
-							timestamp: Date.now()
-						}).then(() => console.log("เบียดเข้าท็อป 10 บอร์ดแทนที่คะแนนต่ำสุดสำเร็จ"));
-					});
-				} else {
-					console.log("คะแนนไม่สูงพอที่จะติด 10 อันดับแรก");
-				}
-			}
+		currentTopScores.sort((a, b) => b.score - a.score);
+		window.currentTopScoresCopy = currentTopScores; // บันทึกไว้ใช้ตอนบันทึกคะแนน
+		
+		if (currentTopScores.length === 0) {
+		scoreListUl.innerHTML = "<li style='text-align:center; color:#999;'>ยังไม่มีคะแนนบันทึกในเซ็ตนี้</li>";
+		return;
 		}
-	};	
+		
+		currentTopScores.forEach((data, index) => {
+		const li = document.createElement("li");
+		let badge = `${index + 1}.`;
+		if (index === 0) badge = "🥇";
+		if (index === 1) badge = "🥈";
+		if (index === 2) badge = "🥉";
+		li.innerHTML = `<span>${badge} ${data.playerName}</span> <strong>${data.score} แต้ม</strong>`;
+		scoreListUl.appendChild(li);
+		});
+	});
+	};
+
+	// สั่งให้โหลดคะแนนของ Set 1 ขึ้นมาแสดงเป็นค่าเริ่มต้นตอนเปิดเว็บ
+	window.loadFirebaseScores("1");
+
+	// 2. ฟังก์ชันตรวจสอบและบันทึกคะแนนลง Firebase แยกตาม Set ที่ผู้เล่นเลือกเล่น
+	window.firebaseProcessHighScore = function(newPlayerName, newScore) {
+	const currentScores = window.currentTopScoresCopy || [];
+	const targetRef = ref(db, `highscores_set${selectedSet}`);
+	const existingRecord = currentScores.find(item => item.playerName === newPlayerName);
+
+	if (existingRecord) {
+		if (newScore > existingRecord.score) {
+		update(ref(db, `highscores_set${selectedSet}/${existingRecord.key}`), { score: newScore, timestamp: Date.now() });
+		}
+	} else {
+		if (currentScores.length < 10) {
+		push(targetRef, { playerName: newPlayerName, score: newScore, timestamp: Date.now() });
+		} else {
+		const lowestRecord = currentScores[currentScores.length - 1];
+		if (newScore > lowestRecord.score) {
+			remove(ref(db, `highscores_set${selectedSet}/${lowestRecord.key}`)).then(() => {
+			push(targetRef, { playerName: newPlayerName, score: newScore, timestamp: Date.now() });
+			});
+		}
+		}
+	}
+	};
+
 </script>
 </body>
 </html>
