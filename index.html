@@ -218,7 +218,7 @@
     	// Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const highscoresRef = ref(db, "highscores");
+        const highscoresRef = ref(db, "highscores2");
 
         // ตัวแปรภายในเพื่อเก็บสำเนาสแนปชอตล่าสุดของ 10 อันดับแรกไว้เช็คเงื่อนไขตอนจบเกม
         let currentTopScores = [];
